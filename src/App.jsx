@@ -5,13 +5,13 @@ import resourcesData from './data/resources.resources.json';
 const TAX_RATE = 0.02; // 2%
 
 function App() {
-    // Chargement depuis le localStorage
+
     const [transactions, setTransactions] = useState(() => {
         const saved = localStorage.getItem('transactions');
         return saved ? JSON.parse(saved) : [];
     });
 
-    // États pour le formulaire
+
     const [searchTerm, setSearchTerm] = useState('');
     const [suggestions, setSuggestions] = useState([]);
     const [resourceName, setResourceName] = useState('');
@@ -19,11 +19,11 @@ function App() {
     const [buyPrice, setBuyPrice] = useState('');
     const [desiredSellPrice, setDesiredSellPrice] = useState('');
 
-    // États pour le graphique
+
     const [selectedTransaction, setSelectedTransaction] = useState(null);
     const [showChart, setShowChart] = useState(false);
 
-    // Sauvegarde des transactions dans le localStorage
+
     useEffect(() => {
         localStorage.setItem('transactions', JSON.stringify(transactions));
     }, [transactions]);
@@ -72,7 +72,7 @@ function App() {
         };
 
         setTransactions(prev => [...prev, newLine]);
-        // Pas de reset automatique des champs, on peut ajouter plusieurs lots d'affilée
+
     };
 
     const confirmSale = (id) => {
@@ -168,7 +168,7 @@ function App() {
         <div className="container mx-auto p-4 space-y-4">
             <h1 className="text-2xl font-bold">Suivi Achats/Ventes</h1>
 
-            {/* Formulaire */}
+
             <div className="border p-4 rounded space-y-4">
                 <h2 className="text-lg font-bold">Ajouter une Ressource en Stock</h2>
 
@@ -237,7 +237,7 @@ function App() {
                 </div>
             </div>
 
-            {/* Récapitulatif */}
+
             <div className="border p-4 rounded">
                 <p>Profit/Perte Total: {getTotalProfitLoss()}</p>
             </div>
@@ -296,7 +296,7 @@ function App() {
                 </table>
             </div>
 
-            {/* Graphique au clic (toggle) avec 3 courbes et YAxis débutant à 0 */}
+
             {selectedTransaction && showChart && combinedData.length > 0 && (
                 <div className="border p-4 rounded">
                     <h3 className="text-lg font-bold">Historique des prix pour {selectedTransaction.resourceName}</h3>
