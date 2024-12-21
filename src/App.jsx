@@ -1,3 +1,4 @@
+// App.jsx
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import resourcesData from './data/resources.resources.json';
@@ -26,9 +27,13 @@ function App() {
     const [collapsedGroups, setCollapsedGroups] = useState({});
     const [selectedDateForSummary, setSelectedDateForSummary] = useState(null);
 
-    // Etats pour le calendrier (navigation mois/année)
+    // États pour le calendrier (navigation mois/année)
     const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
     const [currentMonth, setCurrentMonth] = useState(new Date().getMonth()); // 0-11
+
+    // États pour le tri
+    const [sortConfigOngoing, setSortConfigOngoing] = useState({ key: null, direction: 'ascending' });
+    const [sortConfigSales, setSortConfigSales] = useState({ key: null, direction: 'ascending' });
 
     useEffect(() => {
         localStorage.setItem('transactions', JSON.stringify(transactions));
@@ -79,7 +84,7 @@ function App() {
         const newLine = {
             id: Date.now(),
             resourceName: resourceName, // On utilise le nom tapé, qu'il existe ou non dans le JSON
-            quantity: qty,
+            quantity: qty, // Assurez-vous que c'est un nombre
             buyPrice: buyP,
             desiredSellPrice: sellP,
             sellPrice: null,
@@ -357,12 +362,82 @@ function App() {
         'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
     ];
 
+    // Fonction de comparaison générique
+    const compareValues = (a, b, key, direction) => {
+        const dirMultiplier = direction === 'ascending' ? 1 : -1;
+
+        const valA = a[key];
+        const valB = b[key];
+
+        // Gérer les valeurs undefined ou null
+        if (valA === undefined || valA === null) return 1 * dirMultiplier;
+        if (valB === undefined || valB === null) return -1 * dirMultiplier;
+
+        // Comparer les nombres
+        if (typeof valA === 'number' && typeof valB === 'number') {
+            return (valA - valB) * dirMultiplier;
+        }
+
+        // Comparer les chaînes de caractères
+        const aStr = valA.toString().toLowerCase();
+        const bStr = valB.toString().toLowerCase();
+
+        if (aStr < bStr) return -1 * dirMultiplier;
+        if (aStr > bStr) return 1 * dirMultiplier;
+        return 0;
+    };
+
+    // Fonctions de tri pour les Ventes en Cours
+    const sortedOngoingTransactions = React.useMemo(() => {
+        let sortable = [...ongoingTransactions];
+        if (sortConfigOngoing.key !== null) {
+            sortable.sort((a, b) => compareValues(a, b, sortConfigOngoing.key, sortConfigOngoing.direction));
+        }
+        return sortable;
+    }, [ongoingTransactions, sortConfigOngoing]);
+
+    const requestSortOngoing = (key) => {
+        let direction = 'ascending';
+        if (sortConfigOngoing.key === key && sortConfigOngoing.direction === 'ascending') direction = 'descending';
+        setSortConfigOngoing({ key, direction });
+    };
+
+    const getSortIndicatorOngoing = (key) => {
+        if (sortConfigOngoing.key !== key) return null;
+        return sortConfigOngoing.direction === 'ascending' ? '↑' : '↓';
+    };
+
+    // Fonctions de tri pour les Ventes par Date
+    const sortedSalesByDate = React.useMemo(() => {
+        let sorted = {};
+        Object.keys(salesByDate).forEach(dateStr => {
+            let sortable = [...salesByDate[dateStr]];
+            if (sortConfigSales.key !== null) {
+                sortable.sort((a, b) => compareValues(a, b, sortConfigSales.key, sortConfigSales.direction));
+            }
+            sorted[dateStr] = sortable;
+        });
+        return sorted;
+    }, [salesByDate, sortConfigSales]);
+
+    const requestSortSales = (key) => {
+        let direction = 'ascending';
+        if (sortConfigSales.key === key && sortConfigSales.direction === 'ascending') direction = 'descending';
+        setSortConfigSales({ key, direction });
+    };
+
+    const getSortIndicatorSales = (key) => {
+        if (sortConfigSales.key !== key) return null;
+        return sortConfigSales.direction === 'ascending' ? '↑' : '↓';
+    };
+
     return (
         <div className="container mx-auto p-4 space-y-4">
             <h1 className="text-2xl font-bold">Suivi Achats/Ventes</h1>
 
             <div className="grid grid-cols-2 gap-4">
                 <div>
+                    {/* Formulaire d'ajout de ressource */}
                     <div className="border p-4 rounded space-y-4">
                         <h2 className="text-lg font-bold">Ajouter une Ressource en Stock</h2>
 
@@ -378,7 +453,7 @@ function App() {
                                 <ul className="absolute z-10 bg-white border rounded w-full max-h-40 overflow-y-auto">
                                     {suggestions.map((item) => (
                                         <li
-                                            key={item._id.$oid}
+                                            key={item.name} // Utilisation de 'name' comme clé unique
                                             onClick={() => selectSuggestion(item)}
                                             className="p-2 hover:bg-gray-100 cursor-pointer"
                                         >
@@ -431,10 +506,12 @@ function App() {
                         </div>
                     </div>
 
+                    {/* Affichage du profit/perte total */}
                     <div className="border p-4 rounded mt-4">
                         <p>Profit/Perte Total: {getTotalProfitLoss()} Kamas</p>
                     </div>
 
+                    {/* Formulaire de mise à jour des prix */}
                     <div className="border p-4 rounded space-y-2 mt-4">
                         <h2 className="text-lg font-bold">Mise à jour des prix (sélection multiple)</h2>
                         <input
@@ -522,14 +599,19 @@ function App() {
                 </div>
             </div>
 
+            {/* Ventes en Cours */}
             <div className="border rounded p-4 mt-4">
                 <h3 className="text-lg font-bold mb-2">Ventes en Cours</h3>
                 <table className="w-full text-left">
                     <thead className="bg-gray-100">
                     <tr>
                         <th className="p-2"></th>
-                        <th className="p-2">Ressource</th>
-                        <th className="p-2">Quantité</th>
+                        <th className="p-2 cursor-pointer" onClick={() => requestSortOngoing('resourceName')}>
+                            Ressource {getSortIndicatorOngoing('resourceName')}
+                        </th>
+                        <th className="p-2 cursor-pointer" onClick={() => requestSortOngoing('quantity')}>
+                            Quantité {getSortIndicatorOngoing('quantity')}
+                        </th>
                         <th className="p-2">Prix d'achat</th>
                         <th className="p-2">Prix de vente souhaité</th>
                         <th className="p-2">Taxe</th>
@@ -547,7 +629,7 @@ function App() {
                     </tr>
                     </thead>
                     <tbody>
-                    {ongoingTransactions.map((tx) => {
+                    {sortedOngoingTransactions.map((tx) => {
                         const isSelected = selectedRows.includes(tx.id);
                         const totalTax = computeTaxDisplay(tx);
                         const isSold = tx.sellPrice !== null && tx.sellPrice !== undefined;
@@ -585,16 +667,17 @@ function App() {
                             </tr>
                         );
                     })}
-                    {ongoingTransactions.length === 0 && (
+                    {sortedOngoingTransactions.length === 0 && (
                         <tr><td colSpan={8} className="p-2 text-center text-gray-500">Aucune vente en cours</td></tr>
                     )}
                     </tbody>
                 </table>
             </div>
 
+            {/* Ventes par Date */}
             {dateGroups.map(dateStr => {
                 const groupCollapsed = collapsedGroups[dateStr] || false;
-                const groupTransactions = salesByDate[dateStr];
+                const groupTransactions = sortedSalesByDate[dateStr];
                 return (
                     <div key={dateStr} className="border rounded p-4 mt-4">
                         <div className="flex items-center space-x-2 mb-2">
@@ -611,8 +694,12 @@ function App() {
                                 <thead className="bg-gray-100">
                                 <tr>
                                     <th className="p-2"></th>
-                                    <th className="p-2">Ressource</th>
-                                    <th className="p-2">Quantité</th>
+                                    <th className="p-2 cursor-pointer" onClick={() => requestSortSales('resourceName')}>
+                                        Ressource {getSortIndicatorSales('resourceName')}
+                                    </th>
+                                    <th className="p-2 cursor-pointer" onClick={() => requestSortSales('quantity')}>
+                                        Quantité {getSortIndicatorSales('quantity')}
+                                    </th>
                                     <th className="p-2">Prix d'achat</th>
                                     <th className="p-2">Prix de vente final</th>
                                     <th className="p-2">Date vente</th>
@@ -659,6 +746,7 @@ function App() {
                 );
             })}
 
+            {/* Graphique de l'historique des prix */}
             {selectedTransaction && showChart && combinedData.length > 0 && (
                 <div className="border p-4 rounded mt-4">
                     <h3 className="text-lg font-bold">Historique des prix pour {selectedTransaction.resourceName}</h3>
