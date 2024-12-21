@@ -601,7 +601,9 @@ function App() {
 
             {/* Ventes en Cours */}
             <div className="border rounded p-4 mt-4">
-                <h3 className="text-lg font-bold mb-2">Ventes en Cours</h3>
+                <h3 className="text-lg font-bold mb-2">
+                    Ventes en Cours ({ongoingTransactions.length} lot{ongoingTransactions.length > 1 ? 's' : ''})
+                </h3>
                 <table className="w-full text-left">
                     <thead className="bg-gray-100">
                     <tr>
@@ -668,7 +670,9 @@ function App() {
                         );
                     })}
                     {sortedOngoingTransactions.length === 0 && (
-                        <tr><td colSpan={8} className="p-2 text-center text-gray-500">Aucune vente en cours</td></tr>
+                        <tr>
+                            <td colSpan={8} className="p-2 text-center text-gray-500">Aucune vente en cours</td>
+                        </tr>
                     )}
                     </tbody>
                 </table>
