@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test DofusDB API</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        pre { background: #f4f4f4; padding: 10px; overflow-x: auto; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        #result { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Test de l'API DofusDB - Familles de Monstres</h1>
+
+    <div>
+        <input type="number" id="monsterId" value="101" placeholder="ID du monstre">
+        <button onclick="testMonsterAPI()">Tester Monstre</button>
+        <button onclick="testMonsterFamilies()">Tester Familles</button>
+        <button onclick="testMonsterWithParams()">Tester avec Params</button>
+    </div>
+
+    <div id="result"></div>
+
+    <script>
+        const resultDiv = document.getElementById('result');
+
+        function displayResult(title, data) {
+            resultDiv.innerHTML += `<h3>${title}</h3><pre>${JSON.stringify(data, null, 2)}</pre>`;
+        }
+
+        function displayError(title, error) {
+            resultDiv.innerHTML += `<h3>${title} - ERREUR</h3><pre>${error}</pre>`;
+        }
+
+        async function testMonsterAPI() {
+            resultDiv.innerHTML = '';
+            const monsterId = document.getElementById('monsterId').value;
+
+            // Test différents endpoints
+            const endpoints = [
+                `https://api.dofusdb.fr/monsters/${monsterId}`,
+                `https://api.dofusdb.fr/monsters?id=${monsterId}`,
+                `https://api.dofusdb.fr/monsters?_id=${monsterId}`,
+                `https://api.dofusdb.fr/monsters?$limit=1&id=${monsterId}`,
+            ];
+
+            for (const endpoint of endpoints) {
+                try {
+                    console.log('Testing endpoint:', endpoint);
+                    const response = await fetch(endpoint);
+                    const data = await response.json();
+                    displayResult(`Endpoint: ${endpoint}`, data);
+
+                    // Si on trouve la famille, on l'affiche
+                    if (data.family || data.familyId || (data.data && data.data[0])) {
+                        console.log('Famille trouvée:', data);
+                    }
+                } catch (error) {
+                    displayError(endpoint, error.message);
+                }
+            }
+        }
+
+        async function testMonsterFamilies() {
+            resultDiv.innerHTML = '';
+
+            // Test des endpoints pour les familles
+            const endpoints = [
+                'https://api.dofusdb.fr/monster-families',
+                'https://api.dofusdb.fr/monster-families?$limit=10',
+                'https://api.dofusdb.fr/families',
+                'https://api.dofusdb.fr/families?$limit=10',
+            ];
+
+            for (const endpoint of endpoints) {
+                try {
+                    console.log('Testing endpoint:', endpoint);
+                    const response = await fetch(endpoint);
+                    const data = await response.json();
+                    displayResult(`Endpoint: ${endpoint}`, data);
+                } catch (error) {
+                    displayError(endpoint, error.message);
+                }
+            }
+        }
+
+        async function testMonsterWithParams() {
+            resultDiv.innerHTML = '';
+            const monsterId = document.getElementById('monsterId').value;
+
+            // Test avec différents paramètres de query
+            const baseUrl = 'https://api.dofusdb.fr/monsters';
+            const params = [
+                { id: monsterId },
+                { _id: monsterId, $limit: 1 },
+                { $limit: 1, $skip: 0, id: monsterId },
+                { $limit: 1, name: { $exists: true } }
+            ];
+
+            for (const param of params) {
+                const queryString = new URLSearchParams(param).toString();
+                const endpoint = `${baseUrl}?${queryString}`;
+
+                try {
+                    console.log('Testing with params:', param);
+                    const response = await fetch(endpoint);
+                    const data = await response.json();
+                    displayResult(`Params: ${JSON.stringify(param)}`, data);
+                } catch (error) {
+                    displayError(`Params: ${JSON.stringify(param)}`, error.message);
+                }
+            }
+        }
+
+        // Auto-test au chargement
+        console.log('Chargement de la page de test...');
+    </script>
+</body>
+</html>
